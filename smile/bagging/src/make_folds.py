@@ -8,7 +8,7 @@ from data import get_dataset
 
 def main(dataset, outputdir, folds=0):
     data_dict = get_dataset(dataset)
-    bag_ids = np.array(data_dict.keys())
+    bag_ids = np.array(list(data_dict.keys()))
     Y = [data_dict[bid][1] for bid in bag_ids.flat]
 
     n = len(bag_ids)

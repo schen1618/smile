@@ -18,13 +18,13 @@ def main(stats_file, rank_file):
             shuffs = set()
             stats = np.dstack([np.vstack([a for s, a in sorted(shuffled.items())
                                             if not shuffs.add(s)])
-                               for dataset, shuffled in v.items()])
+                               for dataset, shuffled in list(v.items())])
             ranks = (np.argsort(-stats, axis=0) + 1)
             avg_ranks = np.average(ranks, axis=2)
             for s, ranks in zip(sorted(shuffs), avg_ranks):
                 key = (t, c, k, i, s, q)
-                line = ','.join(map(str, key) + map(str, ranks.flat))
-                print line
+                line = ','.join(list(map(str, key)) + list(map(str, ranks.flat)))
+                print(line)
                 f.write(line + '\n')
 
 if __name__ == '__main__':

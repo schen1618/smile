@@ -20,7 +20,7 @@ class SetSVM(object):
         self.estimator = estimator_class(**kwargs)
 
     def fit(self, X, y):
-        X = map(np.asmatrix, X)
+        X = list(map(np.asmatrix, X))
         self.fit_data = X
         gram_matrix = self.set_kernel(X, X)
         self.estimator.fit(gram_matrix, y)
@@ -105,13 +105,13 @@ def set_kernel(k, normalizer=no_norm):
             xinst = sum(map(len, X))
             yinst = sum(map(len, Y))
             if xinst*yinst*8 >= MEM_LIMIT:
-                x_norm = matrix(map(norm, X))
-                y_norm = matrix(map(norm, Y))
+                x_norm = matrix(list(map(norm, X)))
+                y_norm = matrix(list(map(norm, Y)))
                 norms = x_norm.T*y_norm
                 raw_kernel = np.array([[np.sum(k(x,y)) for y in Y]
                                        for x in _prog(X)])
             else:
-                x_norm = matrix(map(norm, X))
+                x_norm = matrix(list(map(norm, X)))
                 if id(X) == id(Y):
                     # Optimize for symmetric case
                     norms = x_norm.T*x_norm
@@ -128,11 +128,11 @@ def set_kernel(k, normalizer=no_norm):
                         diag = np.array([np.sum(k(x, x)) for x in X])
                         raw_kernel = upper + upper.T + spdiag(diag)
                 else:
-                    y_norm = matrix(map(norm, Y))
+                    y_norm = matrix(list(map(norm, Y)))
                     norms = x_norm.T*y_norm
                     raw_kernel = k(vstack(X), vstack(Y))
-                    lensX = map(len, X)
-                    lensY = map(len, Y)
+                    lensX = list(map(len, X))
+                    lensY = list(map(len, Y))
                     if any(l != 1 for l in lensX):
                         raw_kernel = vstack([np.sum(raw_kernel[i:j, :], axis=0)
                                              for i, j in slices(lensX)])

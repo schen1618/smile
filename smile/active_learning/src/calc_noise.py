@@ -5,7 +5,7 @@ from collections import defaultdict
 try:
     from yaml import CLoader as Loader
 except ImportError:
-    print 'Warning: not using CLoader'
+    print('Warning: not using CLoader')
     from yaml import Loader
 
 from progress import ProgressMonitor
@@ -19,7 +19,7 @@ def get_positive_shuffled(labeled, initial, shuffled):
     for i, bid, iid, label in labeled:
         if lbound <= i and i < ubound:
             bags[i].append((bid, iid))
-    return bags.values()
+    return list(bags.values())
 
 def count_actual_positive(bags, y_dict):
     i = 0
@@ -62,10 +62,10 @@ def main(configfile, folddir, resultsdir):
 
         prog.increment()
         if total > 0:
-            print 1 - (float(actual) / total)
+            print(1 - (float(actual) / total))
 
     if total > 0:
-        print 1 - (float(actual) / total)
+        print(1 - (float(actual) / total))
 
 if __name__ == '__main__':
     from optparse import OptionParser, OptionGroup

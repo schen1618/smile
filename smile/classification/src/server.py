@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import yaml
 import time
@@ -9,13 +9,14 @@ from threading import RLock
 from collections import defaultdict
 from random import shuffle
 import numpy as np
+from yaml.loader import Loader
 
 import shuffling
 from data import get_folds, get_fold, get_dataset
 from progress import ProgressMonitor
 
 PORT = 2117
-DEFAULT_TASK_EXPIRE = 120 # Seconds
+DEFAULT_TASK_EXPIRE = 120  # Seconds
 TEMPLATE = """
 <html>
 <head>
@@ -79,14 +80,14 @@ TEMPLATE = """
 </html>
 """
 
+
 def plaintext(f):
-    f._cp_config = {'response.headers.Content-Type': 'text/plain'}
+    f._cp_config = {"response.headers.Content-Type": "text/plain"}
     return f
 
-class ExperimentServer(object):
 
-    def __init__(self, tasks, render, handle,
-                 task_expire=DEFAULT_TASK_EXPIRE):
+class ExperimentServer(object):
+    def __init__(self, tasks, render, handle, task_expire=DEFAULT_TASK_EXPIRE):
         self.status_lock = RLock()
         self.tasks = tasks
         self.handle = handle
@@ -97,11 +98,9 @@ class ExperimentServer(object):
 
     def clean(self):
         with self.status_lock:
-            self.unfinished = filter(lambda x: (not x[1].finished),
-                                     self.unfinished)
+            self.unfinished = [x for x in self.unfinished if (not x[1].finished)]
             for key, task in self.unfinished:
-                if (task.in_progress and
-                    task.staleness() > self.task_expire):
+                if task.in_progress and task.staleness() > self.task_expire:
                     task.quit()
 
     @expose
@@ -123,7 +122,11 @@ class ExperimentServer(object):
                 raise HTTPError(404)
             key, task = candidates.pop(0)
             task.ping()
-        arguments = {'key': key, 'params': task.params, 'shuffled_bags': task.shuffled_bags}
+        arguments = {
+            "key": key,
+            "params": task.params,
+            "shuffled_bags": task.shuffled_bags,
+        }
         return yaml.dump(arguments)
 
     @plaintext
@@ -131,7 +134,8 @@ class ExperimentServer(object):
     def update(self, key_yaml=None):
         try:
             key = yaml.load(key_yaml)
-        except:
+        except BaseException as err:
+            print(err)
             raise HTTPError(400)
         with self.status_lock:
             if not key in self.tasks:
@@ -197,11 +201,21 @@ class ExperimentServer(object):
                 task.finish()
         return "OK"
 
-class Task(object):
 
-    def __init__(self, technique, classifier, dataset, kernel,
-                 fold, rep, noise, shuffled,
-                 params=None, shuffled_bags=None):
+class Task(object):
+    def __init__(
+        self,
+        technique,
+        classifier,
+        dataset,
+        kernel,
+        fold,
+        rep,
+        noise,
+        shuffled,
+        params=None,
+        shuffled_bags=None,
+    ):
         self.technique = technique
         self.classifier = classifier
         self.dataset = dataset
@@ -221,9 +235,17 @@ class Task(object):
         self.finish_time = None
 
     def filebase(self, ext):
-        return ('%s_%s_%s_%s_%d_%d_%.5f_%d.%s' %
-                (self.technique, self.classifier, self.dataset, self.kernel,
-                 self.fold, self.rep, self.noise, self.shuffled, ext))
+        return "%s_%s_%s_%s_%d_%d_%.5f_%d.%s" % (
+            self.technique,
+            self.classifier,
+            self.dataset,
+            self.kernel,
+            self.fold,
+            self.rep,
+            self.noise,
+            self.shuffled,
+            ext,
+        )
 
     def ping(self):
         if not self.finished:
@@ -244,7 +266,7 @@ class Task(object):
         return time.time() - self.last_checkin
 
     def priority(self):
-        return 1000*int(self.in_progress) + 100*int(self.failed)
+        return 1000 * int(self.in_progress) + 100 * int(self.failed)
 
     def finish(self):
         self.finished = True
@@ -252,42 +274,44 @@ class Task(object):
         self.failed = False
         self.finish_time = time.time()
 
+
 def time_remaining_estimate(tasks, alpha=0.1):
     to_go = float(len([task for task in tasks if not task.finished]))
     finish_times = sorted([task.finish_time for task in tasks if task.finished])
     ewma = 0.0
     for interarrival in np.diff(finish_times):
-        ewma = alpha*interarrival + (1.0 - alpha)*ewma
+        ewma = alpha * interarrival + (1.0 - alpha) * ewma
 
     if ewma == 0:
-        return '???'
+        return "???"
 
     remaining = to_go * ewma
     if remaining >= 604800:
-        return '%.1f weeks' % (remaining/604800)
+        return "%.1f weeks" % (remaining / 604800)
     elif remaining >= 86400:
-        return '%.1f days' % (remaining/86400)
+        return "%.1f days" % (remaining / 86400)
     elif remaining >= 3600:
-        return '%.1f hours' % (remaining/3600)
+        return "%.1f hours" % (remaining / 3600)
     elif remaining >= 60:
-        return '%.1f minutes' % (remaining/60)
+        return "%.1f minutes" % (remaining / 60)
     else:
-        return '%.1f seconds' % remaining
+        return "%.1f seconds" % remaining
+
 
 def render(tasks):
     # Get dimensions
     dims = [set() for i in range(3)]
-    for key in tasks.keys():
-        dims[0].add(key[0] + '_' + key[1])
+    for key in list(tasks.keys()):
+        dims[0].add(key[0] + "_" + key[1])
         dims[1].add(key[2])
         dims[2].add(key[3])
-    techniques, datasets, kernels = map(sorted, dims)
+    techniques, datasets, kernels = list(map(sorted, dims))
 
-    time_est = time_remaining_estimate(tasks.values())
+    time_est = time_remaining_estimate(list(tasks.values()))
 
     reindexed = defaultdict(list)
-    for k, v in tasks.items():
-        key = (k[0] + '_' + k[1], k[2], k[3])
+    for k, v in list(tasks.items()):
+        key = (k[0] + "_" + k[1], k[2], k[3])
         reindexed[key].append(v)
 
     tasks = reindexed
@@ -296,30 +320,33 @@ def render(tasks):
     # Technique header row
     table += '<tr><td style="border:0" rowspan="1" colspan="2"></td>'
     for technique in techniques:
-        table += ('<td class="tech">%s</td>' % technique)
-    table += '</tr>\n'
+        table += '<td class="tech">%s</td>' % technique
+    table += "</tr>\n"
 
     # Data rows
     for dataset in datasets:
-        table += ('<tr><td rowspan="%d" class="data">%s</td>' % (len(kernels), dataset))
+        table += '<tr><td rowspan="%d" class="data">%s</td>' % (len(kernels), dataset)
         first_kernel = True
         for kernel in kernels:
             if first_kernel:
                 first_kernel = False
             else:
-                table += '<tr>'
-            table += ('<td class="kernel">%s</td>' % kernel)
+                table += "<tr>"
+            table += '<td class="kernel">%s</td>' % kernel
             for technique in techniques:
                 key = (technique, dataset, kernel)
-                title = ('%s, %s, %s' % key)
+                title = "%s, %s, %s" % key
                 if key in tasks:
-                    table += ('<td style="padding: 0px;">%s</td>' % render_task_summary(tasks[key]))
+                    table += '<td style="padding: 0px;">%s</td>' % render_task_summary(
+                        tasks[key]
+                    )
                 else:
-                    table += ('<td class="na" title="%s"></td>' % title)
-            table += '</tr>\n'
+                    table += '<td class="na" title="%s"></td>' % title
+            table += "</tr>\n"
 
-    table += '</table>'
-    return (TEMPLATE % (time_est, table))
+    table += "</table>"
+    return TEMPLATE % (time_est, table)
+
 
 def render_task_summary(tasks):
     n = float(len(tasks))
@@ -339,32 +366,39 @@ def render_task_summary(tasks):
 
     if n == finished:
         table = '<table class="summary"><tr>'
-        table += ('<td class="done" title="Finished">D</td>')
-        table += ('<td class="done" title="Finished">O</td>')
-        table += ('<td class="done" title="Finished">N</td>')
-        table += ('<td class="done" title="Finished">E</td>')
-        table += '</tr></table>'
+        table += '<td class="done" title="Finished">D</td>'
+        table += '<td class="done" title="Finished">O</td>'
+        table += '<td class="done" title="Finished">N</td>'
+        table += '<td class="done" title="Finished">E</td>'
+        table += "</tr></table>"
     else:
         table = '<table class="summary"><tr>'
-        table += ('<td title="Waiting">%.2f%%</td>' % (100*waiting/n))
-        table += ('<td class="failed" title="Failed">%.2f%%</td>' % (100*failed/n))
-        table += ('<td class="pending" title="In Progress">%.2f%%</td>' % (100*in_progress/n))
-        table += ('<td class="done" title="Finished">%.2f%%</td>' % (100*finished/n))
-        table += '</tr></table>'
+        table += '<td title="Waiting">%.2f%%</td>' % (100 * waiting / n)
+        table += '<td class="failed" title="Failed">%.2f%%</td>' % (100 * failed / n)
+        table += '<td class="pending" title="In Progress">%.2f%%</td>' % (
+            100 * in_progress / n
+        )
+        table += '<td class="done" title="Finished">%.2f%%</td>' % (100 * finished / n)
+        table += "</tr></table>"
     return table
 
-def setup_rep(technique, dataset, fold, rep,
-              noise, shuffled, folddir, repdir):
+
+def setup_rep(technique, dataset, fold, rep, noise, shuffled, folddir, repdir):
     if shuffled == 0:
         return []
-    repfile = ('%s_%s_%d_%d_%.5f_%d.rep' %
-               (technique, dataset, fold, rep, noise, shuffled))
+    repfile = "%s_%s_%d_%d_%.5f_%d.rep" % (
+        technique,
+        dataset,
+        fold,
+        rep,
+        noise,
+        shuffled,
+    )
     reppath = os.path.join(repdir, repfile)
     if os.path.exists(reppath):
-        with open(reppath, 'r') as f:
-            shuffled_bags = map(lambda s: tuple(s.strip().split(',')), f)
-            shuffled_bags = [(int(l[0]), l[1], l[2], int(l[3]))
-                       for l in shuffled_bags]
+        with open(reppath, "r") as f:
+            shuffled_bags = [tuple(s.strip().split(",")) for s in f]
+            shuffled_bags = [(int(l[0]), l[1], l[2], int(l[3])) for l in shuffled_bags]
     else:
         ids, _, y = get_dataset(dataset)
         test_ids = set(bid for bid, iid in get_fold(folddir, dataset, fold))
@@ -381,95 +415,108 @@ def setup_rep(technique, dataset, fold, rep,
         n_pos = len(pos_bags)
         n_neg = len(neg_bags)
         initial_bag_ids = pos_bags + neg_bags
-        initial_labels = ([True]*n_pos) + ([False]*n_neg)
-        initial_bags = [[(bid, iid) for bid, iid in ids if bid == ibid]
-                        for ibid in initial_bag_ids]
+        initial_labels = ([True] * n_pos) + ([False] * n_neg)
+        initial_bags = [
+            [(bid, iid) for bid, iid in ids if bid == ibid] for ibid in initial_bag_ids
+        ]
 
-        if technique == 'shuffle_both':
+        if technique == "shuffle_both":
             shuffled_bags, shuffled_labels = shuffling.shuffle_both(
-                shuffled, initial_bags, initial_labels, noise)
-        elif technique == 'shuffle_pos':
+                shuffled, initial_bags, initial_labels, noise
+            )
+        elif technique == "shuffle_pos":
             shuffled_bags, shuffled_labels = shuffling.shuffle_pos(
-                shuffled, initial_bags, initial_labels, noise)
+                shuffled, initial_bags, initial_labels, noise
+            )
         else:
-            raise Exception('Unsupported shuffling technique: %s' % technique)
+            raise Exception("Unsupported shuffling technique: %s" % technique)
 
         all_bags = shuffled_bags
         all_labels = shuffled_labels
         shuffled_bags = []
-        with open(reppath, 'w+') as f:
+        with open(reppath, "w+") as f:
             for i, (bag, label) in enumerate(zip(all_bags, all_labels)):
                 for bid, iid in bag:
                     linst = (i, bid, iid, int(label))
                     shuffled_bags.append(linst)
-                    f.write('%d,%s,%s,%d\n' % linst)
+                    f.write("%d,%s,%s,%d\n" % linst)
 
     return shuffled_bags
 
+
 def main(configfile, folddir, resultsdir):
-    with open(configfile, 'r') as f:
-        configuration = yaml.load(f)
+    with open(configfile, "r") as f:
+        configuration = yaml.load(f, loader=Loader)
 
     # Count total experiments for progress monitor
     exps = 0
-    for experiment in configuration['experiments']:
-        dataset = experiment['dataset']
+    for experiment in configuration["experiments"]:
+        dataset = experiment["dataset"]
         folds = get_folds(folddir, dataset)
         for f in range(len(folds)):
-            for r in range(experiment['reps']):
-                for n in experiment['noise']:
-                    for s in experiment['shuffled']:
+            for r in range(experiment["reps"]):
+                for n in experiment["noise"]:
+                    for s in experiment["shuffled"]:
                         exps += 1
 
-    prog = ProgressMonitor(total=exps, msg='Generating Shuffled Bags')
+    prog = ProgressMonitor(total=exps, msg="Generating Shuffled Bags")
 
     # Generate tasks from experiment list
     tasks = {}
-    for experiment in configuration['experiments']:
-        technique = experiment['technique']
-        classifier = experiment['classifier']
-        dataset = experiment['dataset']
+    for experiment in configuration["experiments"]:
+        technique = experiment["technique"]
+        classifier = experiment["classifier"]
+        dataset = experiment["dataset"]
         folds = get_folds(folddir, dataset)
         for f in range(len(folds)):
-            for r in range(experiment['reps']):
-                for n in experiment['noise']:
-                    for s in experiment['shuffled']:
-                        key = (technique, classifier,
-                               dataset,
-                               experiment['kernel'],
-                               f, r, n, s)
+            for r in range(experiment["reps"]):
+                for n in experiment["noise"]:
+                    for s in experiment["shuffled"]:
+                        key = (
+                            technique,
+                            classifier,
+                            dataset,
+                            experiment["kernel"],
+                            f,
+                            r,
+                            n,
+                            s,
+                        )
                         kwargs = {}
-                        kwargs['params'] = experiment['params']
-                        kwargs['shuffled_bags'] = setup_rep(technique, dataset,
-                                                            f, r, n, s,
-                                                            folddir, resultsdir)
+                        kwargs["params"] = experiment["params"]
+                        kwargs["shuffled_bags"] = setup_rep(
+                            technique, dataset, f, r, n, s, folddir, resultsdir
+                        )
                         task = Task(*key, **kwargs)
                         tasks[key] = task
                         prog.increment()
 
     # Mark finished tasks
-    for task in tasks.values():
-        predfile = os.path.join(resultsdir, task.filebase('preds'))
+    for task in list(tasks.values()):
+        predfile = os.path.join(resultsdir, task.filebase("preds"))
         if os.path.exists(predfile):
             task.finish()
 
     def handle(key, task, submission):
-        if 'stats' in submission:
-            sfile = os.path.join(resultsdir, task.filebase('stats'))
-            with open(sfile, 'w+') as f:
-                f.write(yaml.dump(submission['stats'], default_flow_style=False))
+        if "stats" in submission:
+            sfile = os.path.join(resultsdir, task.filebase("stats"))
+            with open(sfile, "w+") as f:
+                f.write(yaml.dump(submission["stats"], default_flow_style=False))
 
-        pfile = os.path.join(resultsdir, task.filebase('preds'))
-        with open(pfile, 'w+') as f:
-            f.write(yaml.dump(submission['preds'], default_flow_style=False))
+        pfile = os.path.join(resultsdir, task.filebase("preds"))
+        with open(pfile, "w+") as f:
+            f.write(yaml.dump(submission["preds"], default_flow_style=False))
 
     server = ExperimentServer(tasks, render, handle)
-    cherrypy.config.update({'server.socket_port': PORT,
-                            'server.socket_host': '0.0.0.0'})
+    cherrypy.config.update(
+        {"server.socket_port": PORT, "server.socket_host": "0.0.0.0"}
+    )
     cherrypy.quickstart(server)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from optparse import OptionParser, OptionGroup
+
     parser = OptionParser(usage="Usage: %prog configfile folddir resultsdir")
     options, args = parser.parse_args()
     options = dict(options.__dict__)

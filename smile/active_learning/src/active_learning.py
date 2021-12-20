@@ -19,7 +19,7 @@ class ActiveLearner(object):
             progress = ProgressMonitor(total=self.queries, msg='Active Learning')
         for q in range(self.queries):
             if len(X_pool) <= 0:
-                if self.verbose: print 'Warning: skipping query %d...' % q
+                if self.verbose: print('Warning: skipping query %d...' % q)
                 predictions.append(predictions[-1])
             else:
                 next_labeled = self.select(X_pool)

@@ -16,7 +16,7 @@ def main(stats_file, rank_file):
         for k, v in sorted(stats_dict.items()):
             t, c, k, i, q = k
             rank_dict = defaultdict(list)
-            for dataset, shuffled in v.items():
+            for dataset, shuffled in list(v.items()):
                 baseline = shuffled.pop(0)
                 for s, a in sorted(shuffled.items()):
                     rank_dict[s].append(np.greater(a, baseline).astype(float))
@@ -24,8 +24,8 @@ def main(stats_file, rank_file):
             for s, ranks in sorted(rank_dict.items()):
                 key = (t, c, k, i, s, q)
                 ranks = np.average(np.vstack(ranks), axis=0)
-                line = ','.join(map(str, key) + map(str, ranks.flat))
-                print line
+                line = ','.join(list(map(str, key)) + list(map(str, ranks.flat)))
+                print(line)
                 f.write(line + '\n')
 
 if __name__ == '__main__':

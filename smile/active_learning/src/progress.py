@@ -29,9 +29,9 @@ class ProgressMonitor(object):
         else:
             rm_str = '???'
         if self.msg:
-            print '%s: %3d%% (~%s remaining)' % (self.msg, pc, rm_str)
+            print('%s: %3d%% (~%s remaining)' % (self.msg, pc, rm_str))
         else:
-            print '%3d%% (~%s remaining)' % (pc, rm_str)
+            print('%3d%% (~%s remaining)' % (pc, rm_str))
 
 def format_time(time):
     if time >= 3600:
@@ -45,6 +45,6 @@ if __name__ == '__main__':
     totaltime = 10.0
     total = 1000
     prog = ProgressMonitor(total, 5, "Testing")
-    for i in xrange(total):
+    for i in range(total):
         sleep(totaltime/total)
         prog.increment()

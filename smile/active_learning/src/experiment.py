@@ -21,8 +21,8 @@ def client_target(task, callback):
     (technique, classifier, dataset, kernel,
      fold, rep, initial, shuffled, queries) = key
 
-    print 'Starting task %s...' % str(key)
-    print 'Parameters: %s' % str(params)
+    print('Starting task %s...' % str(key))
+    print('Parameters: %s' % str(params))
 
     ids, X, y = data.get_dataset(dataset)
     id_index = {}
@@ -41,7 +41,7 @@ def client_target(task, callback):
         X_labeled[bag].append(X[id_index[bid, iid]])
         y_labeled[bag] |= bool(yi)
     bags_labeled = sorted(X_labeled.keys())
-    X_labeled = map(np.vstack, [X_labeled[b] for b in bags_labeled])
+    X_labeled = list(map(np.vstack, [X_labeled[b] for b in bags_labeled]))
     y_labeled = [y_labeled[b] for b in bags_labeled]
 
     X_pool = defaultdict(list)
@@ -50,7 +50,7 @@ def client_target(task, callback):
         X_pool[bid].append(X[id_index[bid, iid]])
         y_pool[bid] |= bool(y[id_index[bid, iid]])
     bags_pool = sorted(X_pool.keys())
-    X_pool = map(np.vstack, [X_pool[b] for b in bags_pool])
+    X_pool = list(map(np.vstack, [X_pool[b] for b in bags_pool]))
     y_pool = [y_pool[b] for b in bags_pool]
 
     X_test = defaultdict(list)
@@ -59,7 +59,7 @@ def client_target(task, callback):
         X_test[bid].append(X[id_index[bid, iid]])
         y_test[bid] |= bool(y[id_index[bid, iid]])
     bags_test = sorted(X_test.keys())
-    X_test = map(np.vstack, [X_test[b] for b in bags_test])
+    X_test = list(map(np.vstack, [X_test[b] for b in bags_test]))
     y_test = [y_test[b] for b in bags_test]
 
     results = {}
@@ -72,7 +72,7 @@ def client_target(task, callback):
         active = SVMActiveLearner(cls, queries)
         predictions = active.learn(X_labeled, y_labeled, X_pool, y_pool, X_test)
     else:
-        print 'Technique "%s" not supported' % technique
+        print('Technique "%s" not supported' % technique)
         callback.quit = True
         return
 
@@ -83,11 +83,11 @@ def client_target(task, callback):
             results['preds'][q][bid] = float(y)
 
     predictions = np.column_stack(predictions).T
-    print predictions.shape
+    print(predictions.shape)
     if len(bags_test) > 1:
-        print 'Test AUC Scores:'
+        print('Test AUC Scores:')
         for row in predictions:
-            print '\t%f' % auc_score(np.array(y_test), row.reshape((-1,)))
+            print('\t%f' % auc_score(np.array(y_test), row.reshape((-1,))))
 
-    print 'Finished task %s.' % str(key)
+    print('Finished task %s.' % str(key))
     return results

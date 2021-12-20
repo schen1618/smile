@@ -41,9 +41,9 @@ def get_folds(folddir, dataset):
 def get_fold(folddir, dataset, fold):
     path = os.path.join(folddir, '%s_%04d.fold' % (dataset, fold))
     with open(path, 'r') as f:
-        return map(lambda s: s.strip(), f)
+        return [s.strip() for s in f]
 
 def get_rep(folddir, dataset, fold, rep):
     path = os.path.join(folddir, '%s_%04d_%06d.rep' % (dataset, fold, rep))
     with open(path, 'r') as f:
-        return map(lambda s: s.strip(), f)
+        return [s.strip() for s in f]

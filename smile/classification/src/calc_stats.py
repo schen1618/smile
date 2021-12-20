@@ -4,7 +4,7 @@ import yaml
 try:
     from yaml import CLoader as Loader
 except ImportError:
-    print 'Warning: not using CLoader'
+    print('Warning: not using CLoader')
     from yaml import Loader
 import numpy as np
 from sklearn.metrics import auc_score
@@ -16,10 +16,10 @@ import data
 def true_and_pred(y_dict, preds):
     y_true = []
     y_pred = []
-    for bid in preds.keys():
+    for bid in list(preds.keys()):
         y_true.append(y_dict[bid])
         y_pred.append(preds[bid])
-    return map(np.array, (y_true, y_pred))
+    return list(map(np.array, (y_true, y_pred)))
 
 def calc_auc_score(key, task_list, y_dict):
     predictions = dict()
@@ -52,14 +52,14 @@ def main(configfile, folddir, resultsdir, outputfile):
                         tasks[key] = task
 
     # Mark finished tasks
-    for task in tasks.values():
+    for task in list(tasks.values()):
         predfile = os.path.join(resultsdir, task.filebase('preds'))
         task.predfile = predfile
         if os.path.exists(predfile):
             task.finish()
 
     reindexed = defaultdict(lambda: defaultdict(list))
-    for (t, c, d, k, f, r, n, s), task in tasks.items():
+    for (t, c, d, k, f, r, n, s), task in list(tasks.items()):
         reindexed[(t, c, d, k, n, s)][r].append(task)
 
     existing_keys = set()
@@ -73,7 +73,7 @@ def main(configfile, folddir, resultsdir, outputfile):
         rep_aucs = defaultdict(list)
         for key, reps in sorted(reindexed.items()):
             if key in existing_keys:
-                print 'Skipping %s (already finished)...' % str(key)
+                print(('Skipping %s (already finished)...' % str(key)))
                 continue
             ids, _, y = data.get_dataset(key[2])
             y_dict = defaultdict(bool)
@@ -87,12 +87,12 @@ def main(configfile, folddir, resultsdir, outputfile):
                 else:
                     break
             if len(aucs) != len(reps):
-                print 'Skipping %s (incomplete)...' % str(key)
+                print(('Skipping %s (incomplete)...' % str(key)))
                 continue
             aucs = np.array(aucs)
             avg_auc = np.average(aucs)
-            line = ','.join(map(str, key) + [str(avg_auc)])
-            print line
+            line = ','.join(list(map(str, key)) + [str(avg_auc)])
+            print(line)
             f.write(line + '\n')
 
 if __name__ == '__main__':

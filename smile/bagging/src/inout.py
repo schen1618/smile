@@ -205,7 +205,7 @@ class Bag(MutableSequence):
     Represents a Bag
     """
     def __init__(self, bag_id, examples):
-        classes = map(lambda x: x[-1], examples)
+        classes = [x[-1] for x in examples]
         if any(classes):
             self.label = True
         else:
@@ -247,7 +247,7 @@ def bag_set(exampleset, bag_attr=0):
     bag_dict = defaultdict(list)
     for example in exampleset:
         bag_dict[example[bag_attr]].append(example)
-    return [Bag(bag_id, value) for bag_id, value in bag_dict.items()]
+    return [Bag(bag_id, value) for bag_id, value in list(bag_dict.items())]
 
 def parse_c45(file_base, rootdir='.'):
     """
@@ -345,7 +345,7 @@ def _parse_examples(schema, data_filename):
                 exset.append(ex)
             except Exception as e:
                 traceback.print_exc(file=sys.stderr)
-                print >> sys.stderr, 'Warning: skipping line: "%s"' % line
+                print('Warning: skipping line: "%s"' % line, file=sys.stderr)
     return exset
 
 def _parse_example(schema, line):
@@ -394,7 +394,7 @@ def save_c45(example_set, basename, basedir='.'):
     schema_name = os.path.join(basedir, basename + NAMES_EXT)
     data_name = os.path.join(basedir, basename + DATA_EXT)
 
-    print schema_name
+    print(schema_name)
     with open(schema_name, 'w+') as schema_file:
         schema_file.write('0,1.\n')
         for feature in example_set.schema:
@@ -409,7 +409,7 @@ def save_c45(example_set, basename, basedir='.'):
 
     with open(data_name, 'w+') as data_file:
         for example in example_set:
-            ex_strs = starmap(_feature_to_str, zip(example.schema, example))
+            ex_strs = starmap(_feature_to_str, list(zip(example.schema, example)))
             data_file.write('%s.\n' % ','.join(ex_strs))
 
 def _feature_to_str(feature, value):

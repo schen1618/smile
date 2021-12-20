@@ -55,4 +55,4 @@ def get_folds(folddir, dataset):
 def get_fold(folddir, dataset, fold):
     path = os.path.join(folddir, '%s_%04d.fold' % (dataset, fold))
     with open(path, 'r') as f:
-        return map(lambda s: tuple(s.strip().split(',')), f)
+        return [tuple(s.strip().split(',')) for s in f]

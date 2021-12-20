@@ -4,7 +4,7 @@ import yaml
 try:
     from yaml import CLoader as Loader
 except ImportError:
-    print 'Warning: not using CLoader'
+    print('Warning: not using CLoader')
     from yaml import Loader
 import numpy as np
 from sklearn.metrics import auc_score
@@ -16,10 +16,10 @@ import data
 def true_and_pred(y_dict, preds):
     y_true = []
     y_pred = []
-    for bid in preds.keys():
+    for bid in list(preds.keys()):
         y_true.append(y_dict[bid])
         y_pred.append(preds[bid])
-    return map(np.array, (y_true, y_pred))
+    return list(map(np.array, (y_true, y_pred)))
 
 def get_preds(key, task_list, bag_ids):
     predictions = dict()
@@ -47,14 +47,14 @@ def main(configfile, folddir, resultsdir, outputfile):
                 tasks[key] = task
 
     # Mark finished tasks
-    for task in tasks.values():
+    for task in list(tasks.values()):
         predfile = os.path.join(resultsdir, task.filebase('preds'))
         task.predfile = predfile
         if os.path.exists(predfile):
             task.finish()
 
     reindexed = defaultdict(lambda: defaultdict(list))
-    for (c, d, k, f, r), task in tasks.items():
+    for (c, d, k, f, r), task in list(tasks.items()):
         reindexed[(c, d, k)][r].append(task)
 
     existing_keys = set()
@@ -68,7 +68,7 @@ def main(configfile, folddir, resultsdir, outputfile):
         rep_aucs = defaultdict(list)
         for key, reps in sorted(reindexed.items()):
             if key in existing_keys:
-                print 'Skipping %s (already finished)...' % str(key)
+                print('Skipping %s (already finished)...' % str(key))
                 continue
             data_dict = data.get_dataset(key[1])
             bag_ids = sorted(data_dict.keys())
@@ -81,14 +81,14 @@ def main(configfile, folddir, resultsdir, outputfile):
                 else:
                     break
             if len(predictions) != len(reps):
-                print 'Skipping %s (incomplete)...' % str(key)
+                print('Skipping %s (incomplete)...' % str(key))
                 continue
             predictions = np.vstack(predictions)
             # We want a cumulative average, but doesn't matter for AUC
             cumpreds = np.cumsum(predictions, axis=0)
             aucs = [auc_score(y_true, cp) for cp in cumpreds]
-            line = ','.join(map(str, key) + map(str, aucs))
-            print line
+            line = ','.join(list(map(str, key)) + list(map(str, aucs)))
+            print(line)
             f.write(line + '\n')
 
 if __name__ == '__main__':

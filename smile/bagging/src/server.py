@@ -95,8 +95,7 @@ class ExperimentServer(object):
 
     def clean(self):
         with self.status_lock:
-            self.unfinished = filter(lambda x: (not x[1].finished),
-                                     self.unfinished)
+            self.unfinished = [x for x in self.unfinished if (not x[1].finished)]
             for key, task in self.unfinished:
                 if (task.in_progress and
                     task.staleness() > self.task_expire):
@@ -270,16 +269,16 @@ def time_remaining_estimate(tasks, alpha=0.1):
 def render(tasks):
     # Get dimensions
     dims = [set() for i in range(3)]
-    for key in tasks.keys():
+    for key in list(tasks.keys()):
         dims[0].add(key[0])
         dims[1].add(key[1])
         dims[2].add(key[2])
-    techniques, datasets, kernels = map(sorted, dims)
+    techniques, datasets, kernels = list(map(sorted, dims))
 
-    time_est = time_remaining_estimate(tasks.values())
+    time_est = time_remaining_estimate(list(tasks.values()))
 
     reindexed = defaultdict(list)
-    for k, v in tasks.items():
+    for k, v in list(tasks.items()):
         key = (k[0], k[1], k[2])
         reindexed[key].append(v)
 
@@ -366,7 +365,7 @@ def main(configfile, folddir, resultsdir):
                         tasks[key] = task
 
     # Mark finished tasks
-    for task in tasks.values():
+    for task in list(tasks.values()):
         predfile = os.path.join(resultsdir, task.filebase('preds'))
         if os.path.exists(predfile):
             task.finish()

@@ -17,7 +17,7 @@ def main(stats_file, pval_file):
         for k, v in sorted(stats_dict.items()):
             t, c, k, i, q = k
             diff_dict = defaultdict(list)
-            for dataset, shuffled in v.items():
+            for dataset, shuffled in list(v.items()):
                 baseline = shuffled.pop(0)
                 for s, a in sorted(shuffled.items()):
                     diff_dict[s].append(a - baseline)
@@ -26,8 +26,8 @@ def main(stats_file, pval_file):
                 key = (t, c, k, i, s, q)
                 diffs = np.vstack(diffs)
                 wils = [wilcoxon(diff)[1] for diff in diffs.T]
-                line = ','.join(map(str, key) + map(str, wils))
-                print line
+                line = ','.join(list(map(str, key)) + list(map(str, wils)))
+                print(line)
                 f.write(line + '\n')
 
 if __name__ == '__main__':

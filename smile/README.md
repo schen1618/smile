@@ -1,10 +1,11 @@
-SMILe: Shuffled Multiple-Instance Learning
-==========================================
+qSMILe: Shuffled Multiple-Instance Learning
+===========================================
 
 Gary Doran (<gary.doran@case.edu>) and Soumya Ray (<sray@case.edu>)
 
 Overview
 --------
+
 This package contains the code, datasets, and folds for the experiments found in
 the AAAI 2013 paper _SMILe: Shuffled Mutiple-Instance Learning_. There are three
 main experiments, each in its own directory:
@@ -58,7 +59,9 @@ new dataset, C4.5 format is supported. Otherwise, you will need to modify
 `data.py` to load your custom format. When you have your dataset, you can
 generate folds with a command similar to the following:
 
-    $ ./src/make_folds.py -o 10 tiger folds
+```
+$ ./src/make_folds.py -o 10 tiger folds
+```
 
 This will create 10 "outer" folds for the tiger dataset, and place them in the
 `folds` directory. If the `-o` flag is not specified, leave-one-out folds are
@@ -83,7 +86,9 @@ for testing purposes.
 Finally, you will need to make a directory for storing the results of the
 experiments (e.g. `results`). The server can then be started using:
 
-    $ ./src/server.py config/small_config.yaml folds results
+```
+$ ./src/server.py config/small_config.yaml folds results
+```
 
 After the server starts, you can view the progress using a web browser by
 visiting `http://localhost:PORT/` where PORT is the port number specified near
@@ -94,13 +99,17 @@ the top of `server.py`.
 After the server is started, the client can be started to perform experiments.
 This can be done via:
 
-    $ ./src/client.py localhost
+```
+$ ./src/client.py localhost
+```
 
 If the client is started on a remote computer, simply supply the domain name of
 the server machine (of course, the server must not be behind a firewall or local
 network, etc.):
 
-    $ ./src/client.py my.server.com
+```
+$ ./src/client.py my.server.com
+```
 
 The client will request an experiment, perform it, submit the result, and repeat
 until all experiments are completed. The actual experiment code is located in
@@ -118,7 +127,9 @@ server, so if a server fails, it reload existing results and start from where it
 left off. After all results have been generated, the statistics (area under ROC
 curve) can be computed. The syntax is similar to the server code:
 
-    $ ./src/calc_stats.py config/small_config.yaml folds results stats.csv
+```
+$ ./src/calc_stats.py config/small_config.yaml folds results stats.csv
+```
 
 Here, an extra parameter specifies the output file to which results are to be
 written. The format of the results in `stats.csv` vary between experiments, and

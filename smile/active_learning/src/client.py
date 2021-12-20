@@ -5,8 +5,8 @@ import yaml
 import time
 import traceback
 from threading import RLock, Thread
-from httplib import HTTPConnection
-from urllib import urlencode
+from http.client import HTTPConnection
+from urllib.parse import urlencode
 from itertools import count
 
 from server import PORT
@@ -35,7 +35,7 @@ def do_request(host, port):
         else:
             raise Exception('Got code: %d' % resp.status)
     except Exception as e:
-        print 'Could not get task: %s' % e
+        print('Could not get task: %s' % e)
     finally:
         connection.close()
 
@@ -52,7 +52,7 @@ def do_update(host, port, task, update='update'):
         else:
             raise Exception('Got code: %d' % resp.status)
     except Exception as e:
-        print 'Could not update: %s' % e
+        print('Could not update: %s' % e)
     finally:
         connection.close()
 
@@ -71,7 +71,7 @@ def do_submit(host, port, task, retval):
         else:
             raise Exception('Got code: %d' % resp.status)
     except Exception as e:
-        print 'Could not submit: %s' % e
+        print('Could not submit: %s' % e)
     finally:
         connection.close()
 
@@ -82,33 +82,33 @@ def client_loop(target, host, port=PORT, blacklist=None):
         except Exception as e:
             callback.fail = True
             traceback.print_exc()
-            print 'Task Failed: %s' % e
+            print('Task Failed: %s' % e)
 
     while True:
-        print 'Getting task...'
+        print('Getting task...')
         for attempt in count():
             task = do_request(host, port)
             if task is not None: break
             stime = min(2**attempt, 300)
-            print 'No task available; trying again in %d sec.' % stime
+            print('No task available; trying again in %d sec.' % stime)
             time.sleep(2**attempt)
 
         callback = StatusCallback(str(task['key']))
         if blacklist is not None and os.path.exists(blacklist):
-            print 'Checking task...'
+            print('Checking task...')
             with open(blacklist, 'r') as f:
                 for line in f:
                     pattern = line.strip()
                     if re.match(pattern, callback.task_string):
-                        print ('Task "%s" matches blacklist entry "%s"'
-                                % (callback.task_string, pattern))
+                        print(('Task "%s" matches blacklist entry "%s"'
+                                % (callback.task_string, pattern)))
                         callback.quit = True
                         break
 
         if not callback.quit:
             target_thread = Thread(target=wrapper, args=(task, callback))
             target_thread.daemon = True
-            print 'Starting task...'
+            print('Starting task...')
             target_thread.start()
             while target_thread.is_alive():
                 do_update(host, port, task['key'])
@@ -119,22 +119,22 @@ def client_loop(target, host, port=PORT, blacklist=None):
             target_thread.join()
 
         if callback.quit:
-            print 'Task aborted.'
+            print('Task aborted.')
             do_update(host, port, task['key'], 'quit')
         elif callback.fail or callback.retval is None:
-            print 'Task failed!'
+            print('Task failed!')
             do_update(host, port, task['key'], 'fail')
         else:
-            print 'Task finished.'
-            print 'Submitting result...'
+            print('Task finished.')
+            print('Submitting result...')
             if do_submit(host, port, task['key'], callback.retval):
-                print 'Result submitted!'
+                print('Result submitted!')
 
 def test_target(task, status_callback):
     start = time.time()
     n = 5
     for i in range(n):
-        print '%d: %s' % (i, task)
+        print('%d: %s' % (i, task))
         time.sleep(1)
     duration = time.time() - start
     results = {}

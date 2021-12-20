@@ -18,8 +18,8 @@ def client_target(task, callback):
     params = task['params']
     (classifier, dataset, kernel, fold, rep) = key
 
-    print 'Starting task %s...' % str(key)
-    print 'Parameters: %s' % str(params)
+    print('Starting task %s...' % str(key))
+    print('Parameters: %s' % str(params))
 
     data_dict = data.get_dataset(dataset)
 
@@ -47,7 +47,7 @@ def client_target(task, callback):
         predictions = nsk.decision_function(X_test)
 
     else:
-        print 'Technique "%s" not supported' % technique
+        print('Technique "%s" not supported' % technique)
         callback.quit = True
         return
 
@@ -56,7 +56,7 @@ def client_target(task, callback):
         results['preds'][i] = float(y)
 
     if len(y_test) > 1:
-        print 'Test AUC Score: %f' % auc_score(y_test, predictions)
+        print('Test AUC Score: %f' % auc_score(y_test, predictions))
 
-    print 'Finished task %s.' % str(key)
+    print('Finished task %s.' % str(key))
     return results
