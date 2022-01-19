@@ -8,6 +8,7 @@ from collections import defaultdict
 from sklearn.svm import SVC
 from sklearn.metrics import roc_auc_score
 import warnings
+import misvm
 
 warnings.filterwarnings("ignore")
 
@@ -61,7 +62,13 @@ def client_target(task, callback):
     results["preds"] = {}
     start = time.time()
 
-    if classifier == "nsk":
+    if classifier == "misvm":
+        # config = {"C": 73352.05433336335, "gamma": 0.06718192835507764}
+        cls = misvm.miSVM(kernel="rbf", max_iters=50, verbose=False, **params)
+        cls.fit(X_train, y_train)
+        predictions = cls.predict(X_test)
+
+    elif classifier == "nsk":
         nsk = SetSVM(SVC, kernel, **params)
         nsk.fit(X_train, y_train)
         predictions = nsk.decision_function(X_test)

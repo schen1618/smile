@@ -13,7 +13,7 @@ import numpy as np
 from data import get_folds
 
 PORT = 2118
-DEFAULT_TASK_EXPIRE = 120 # Seconds
+DEFAULT_TASK_EXPIRE = 120  # Seconds
 TEMPLATE = """
 <html>
 <head>
@@ -77,14 +77,14 @@ TEMPLATE = """
 </html>
 """
 
+
 def plaintext(f):
-    f._cp_config = {'response.headers.Content-Type': 'text/plain'}
+    f._cp_config = {"response.headers.Content-Type": "text/plain"}
     return f
 
-class ExperimentServer(object):
 
-    def __init__(self, tasks, render, handle,
-                 task_expire=DEFAULT_TASK_EXPIRE):
+class ExperimentServer(object):
+    def __init__(self, tasks, render, handle, task_expire=DEFAULT_TASK_EXPIRE):
         self.status_lock = RLock()
         self.tasks = tasks
         self.handle = handle
@@ -97,8 +97,7 @@ class ExperimentServer(object):
         with self.status_lock:
             self.unfinished = [x for x in self.unfinished if (not x[1].finished)]
             for key, task in self.unfinished:
-                if (task.in_progress and
-                    task.staleness() > self.task_expire):
+                if task.in_progress and task.staleness() > self.task_expire:
                     task.quit()
 
     @expose
@@ -120,14 +119,14 @@ class ExperimentServer(object):
                 raise HTTPError(404)
             key, task = candidates.pop(0)
             task.ping()
-        arguments = {'key': key, 'params': task.params}
+        arguments = {"key": key, "params": task.params}
         return yaml.dump(arguments)
 
     @plaintext
     @expose
     def update(self, key_yaml=None):
         try:
-            key = yaml.load(key_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -145,7 +144,7 @@ class ExperimentServer(object):
     @expose
     def quit(self, key_yaml=None):
         try:
-            key = yaml.load(key_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -163,7 +162,7 @@ class ExperimentServer(object):
     @expose
     def fail(self, key_yaml=None):
         try:
-            key = yaml.load(key_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -181,8 +180,8 @@ class ExperimentServer(object):
     @expose
     def submit(self, key_yaml=None, sub_yaml=None):
         try:
-            key = yaml.load(key_yaml)
-            submission = yaml.load(sub_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
+            submission = yaml.load(sub_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -194,10 +193,9 @@ class ExperimentServer(object):
                 task.finish()
         return "OK"
 
-class Task(object):
 
-    def __init__(self, classifier, dataset, kernel,
-                 fold, rep, params=None):
+class Task(object):
+    def __init__(self, classifier, dataset, kernel, fold, rep, params=None):
         self.classifier = classifier
         self.dataset = dataset
         self.kernel = kernel
@@ -213,9 +211,14 @@ class Task(object):
         self.finish_time = None
 
     def filebase(self, ext):
-        return ('%s_%s_%s_%d_%d.%s' %
-                (self.classifier, self.dataset, self.kernel,
-                 self.fold, self.rep, ext))
+        return "%s_%s_%s_%d_%d.%s" % (
+            self.classifier,
+            self.dataset,
+            self.kernel,
+            self.fold,
+            self.rep,
+            ext,
+        )
 
     def ping(self):
         if not self.finished:
@@ -236,7 +239,7 @@ class Task(object):
         return time.time() - self.last_checkin
 
     def priority(self):
-        return 1000*int(self.in_progress) + 100*int(self.failed)
+        return 1000 * int(self.in_progress) + 100 * int(self.failed)
 
     def finish(self):
         self.finished = True
@@ -244,27 +247,29 @@ class Task(object):
         self.failed = False
         self.finish_time = time.time()
 
+
 def time_remaining_estimate(tasks, alpha=0.1):
     to_go = float(len([task for task in tasks if not task.finished]))
     finish_times = sorted([task.finish_time for task in tasks if task.finished])
     ewma = 0.0
     for interarrival in np.diff(finish_times):
-        ewma = alpha*interarrival + (1.0 - alpha)*ewma
+        ewma = alpha * interarrival + (1.0 - alpha) * ewma
 
     if ewma == 0:
-        return '???'
+        return "???"
 
     remaining = to_go * ewma
     if remaining >= 604800:
-        return '%.1f weeks' % (remaining/604800)
+        return "%.1f weeks" % (remaining / 604800)
     elif remaining >= 86400:
-        return '%.1f days' % (remaining/86400)
+        return "%.1f days" % (remaining / 86400)
     elif remaining >= 3600:
-        return '%.1f hours' % (remaining/3600)
+        return "%.1f hours" % (remaining / 3600)
     elif remaining >= 60:
-        return '%.1f minutes' % (remaining/60)
+        return "%.1f minutes" % (remaining / 60)
     else:
-        return '%.1f seconds' % remaining
+        return "%.1f seconds" % remaining
+
 
 def render(tasks):
     # Get dimensions
@@ -288,30 +293,33 @@ def render(tasks):
     # Technique header row
     table += '<tr><td style="border:0" rowspan="1" colspan="2"></td>'
     for technique in techniques:
-        table += ('<td class="tech">%s</td>' % technique)
-    table += '</tr>\n'
+        table += '<td class="tech">%s</td>' % technique
+    table += "</tr>\n"
 
     # Data rows
     for dataset in datasets:
-        table += ('<tr><td rowspan="%d" class="data">%s</td>' % (len(kernels), dataset))
+        table += '<tr><td rowspan="%d" class="data">%s</td>' % (len(kernels), dataset)
         first_kernel = True
         for kernel in kernels:
             if first_kernel:
                 first_kernel = False
             else:
-                table += '<tr>'
-            table += ('<td class="kernel">%s</td>' % kernel)
+                table += "<tr>"
+            table += '<td class="kernel">%s</td>' % kernel
             for technique in techniques:
                 key = (technique, dataset, kernel)
-                title = ('%s, %s, %s' % key)
+                title = "%s, %s, %s" % key
                 if key in tasks:
-                    table += ('<td style="padding: 0px;">%s</td>' % render_task_summary(tasks[key]))
+                    table += '<td style="padding: 0px;">%s</td>' % render_task_summary(
+                        tasks[key]
+                    )
                 else:
-                    table += ('<td class="na" title="%s"></td>' % title)
-            table += '</tr>\n'
+                    table += '<td class="na" title="%s"></td>' % title
+            table += "</tr>\n"
 
-    table += '</table>'
-    return (TEMPLATE % (time_est, table))
+    table += "</table>"
+    return TEMPLATE % (time_est, table)
+
 
 def render_task_summary(tasks):
     n = float(len(tasks))
@@ -331,62 +339,67 @@ def render_task_summary(tasks):
 
     if n == finished:
         table = '<table class="summary"><tr>'
-        table += ('<td class="done" title="Finished">D</td>')
-        table += ('<td class="done" title="Finished">O</td>')
-        table += ('<td class="done" title="Finished">N</td>')
-        table += ('<td class="done" title="Finished">E</td>')
-        table += '</tr></table>'
+        table += '<td class="done" title="Finished">D</td>'
+        table += '<td class="done" title="Finished">O</td>'
+        table += '<td class="done" title="Finished">N</td>'
+        table += '<td class="done" title="Finished">E</td>'
+        table += "</tr></table>"
     else:
         table = '<table class="summary"><tr>'
-        table += ('<td title="Waiting">%.2f%%</td>' % (100*waiting/n))
-        table += ('<td class="failed" title="Failed">%.2f%%</td>' % (100*failed/n))
-        table += ('<td class="pending" title="In Progress">%.2f%%</td>' % (100*in_progress/n))
-        table += ('<td class="done" title="Finished">%.2f%%</td>' % (100*finished/n))
-        table += '</tr></table>'
+        table += '<td title="Waiting">%.2f%%</td>' % (100 * waiting / n)
+        table += '<td class="failed" title="Failed">%.2f%%</td>' % (100 * failed / n)
+        table += '<td class="pending" title="In Progress">%.2f%%</td>' % (
+            100 * in_progress / n
+        )
+        table += '<td class="done" title="Finished">%.2f%%</td>' % (100 * finished / n)
+        table += "</tr></table>"
     return table
 
+
 def main(configfile, folddir, resultsdir):
-    with open(configfile, 'r') as f:
-        configuration = yaml.load(f)
+    with open(configfile, "r") as f:
+        configuration = yaml.load(f, Loader=Loader)
 
     # Generate tasks from experiment list
     tasks = {}
-    for experiment in configuration['experiments']:
-        classifier = experiment['classifier']
-        dataset = experiment['dataset']
+    for experiment in configuration["experiments"]:
+        classifier = experiment["classifier"]
+        dataset = experiment["dataset"]
         folds = get_folds(folddir, dataset)
         for f in range(len(folds)):
-            for r in range(experiment['reps'] + 1):
-                        key = (classifier, dataset,
-                               experiment['kernel'], f, r)
-                        kwargs = {}
-                        kwargs['params'] = experiment['params']
-                        task = Task(*key, **kwargs)
-                        tasks[key] = task
+            for r in range(experiment["reps"] + 1):
+                key = (classifier, dataset, experiment["kernel"], f, r)
+                kwargs = {}
+                kwargs["params"] = experiment["params"]
+                task = Task(*key, **kwargs)
+                tasks[key] = task
 
     # Mark finished tasks
     for task in list(tasks.values()):
-        predfile = os.path.join(resultsdir, task.filebase('preds'))
+        predfile = os.path.join(resultsdir, task.filebase("preds"))
         if os.path.exists(predfile):
             task.finish()
 
     def handle(key, task, submission):
-        if 'stats' in submission:
-            sfile = os.path.join(resultsdir, task.filebase('stats'))
-            with open(sfile, 'w+') as f:
-                f.write(yaml.dump(submission['stats'], default_flow_style=False))
+        if "stats" in submission:
+            sfile = os.path.join(resultsdir, task.filebase("stats"))
+            with open(sfile, "w+") as f:
+                f.write(yaml.dump(submission["stats"], default_flow_style=False))
 
-        pfile = os.path.join(resultsdir, task.filebase('preds'))
-        with open(pfile, 'w+') as f:
-            f.write(yaml.dump(submission['preds'], default_flow_style=False))
+        pfile = os.path.join(resultsdir, task.filebase("preds"))
+        with open(pfile, "w+") as f:
+            f.write(yaml.dump(submission["preds"], default_flow_style=False))
 
     server = ExperimentServer(tasks, render, handle)
-    cherrypy.config.update({'server.socket_port': PORT,
-                            'server.socket_host': '0.0.0.0'})
+    cherrypy.config.update(
+        {"server.socket_port": PORT, "server.socket_host": "0.0.0.0"}
+    )
     cherrypy.quickstart(server)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from optparse import OptionParser, OptionGroup
+
     parser = OptionParser(usage="Usage: %prog configfile folddir resultsdir")
     options, args = parser.parse_args()
     options = dict(options.__dict__)

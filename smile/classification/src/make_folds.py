@@ -25,7 +25,8 @@ def main(dataset, outputdir, outerfolds=0):
     def fold_path(o):
         return os.path.join(outputdir, "%s_%04d.fold" % (dataset, o))
 
-    for o, (trn_fold, fold) in enumerate(StratifiedKFold(Y, outerfolds)):
+    skf = StratifiedKFold(n_splits=outerfolds)
+    for o, (trn_fold, fold) in enumerate(skf.split(np.zeros(len(Y)), Y)):
         with open(fold_path(o), "w+") as f:
             for bid in bag_ids[fold].flat:
                 for iid in bag_index[bid]:
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     )
     options, args = parser.parse_args()
     options = dict(options.__dict__)
-    if len(args) != 2:
-        parser.print_help()
-        exit()
-    main(*args, **options)
+    # if len(args) != 2:
+    #     parser.print_help()
+    #     exit()
+    main("perturbed_musk_1", "folds", 10)

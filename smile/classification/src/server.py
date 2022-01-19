@@ -10,6 +10,10 @@ from collections import defaultdict
 from random import shuffle
 import numpy as np
 from yaml.loader import Loader
+import hypertuning
+import misvm
+from misvmio import parse_c45, bag_set
+from sklearn import preprocessing
 
 import shuffling
 from data import get_folds, get_fold, get_dataset
@@ -133,7 +137,7 @@ class ExperimentServer(object):
     @expose
     def update(self, key_yaml=None):
         try:
-            key = yaml.load(key_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
         except BaseException as err:
             print(err)
             raise HTTPError(400)
@@ -152,7 +156,7 @@ class ExperimentServer(object):
     @expose
     def quit(self, key_yaml=None):
         try:
-            key = yaml.load(key_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -170,7 +174,7 @@ class ExperimentServer(object):
     @expose
     def fail(self, key_yaml=None):
         try:
-            key = yaml.load(key_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -188,8 +192,8 @@ class ExperimentServer(object):
     @expose
     def submit(self, key_yaml=None, sub_yaml=None):
         try:
-            key = yaml.load(key_yaml)
-            submission = yaml.load(sub_yaml)
+            key = yaml.load(key_yaml, Loader=Loader)
+            submission = yaml.load(sub_yaml, Loader=Loader)
         except:
             raise HTTPError(400)
         with self.status_lock:
@@ -446,7 +450,7 @@ def setup_rep(technique, dataset, fold, rep, noise, shuffled, folddir, repdir):
 
 def main(configfile, folddir, resultsdir):
     with open(configfile, "r") as f:
-        configuration = yaml.load(f, loader=Loader)
+        configuration = yaml.load(f, Loader=Loader)
 
     # Count total experiments for progress monitor
     exps = 0
@@ -460,6 +464,22 @@ def main(configfile, folddir, resultsdir):
                         exps += 1
 
     prog = ProgressMonitor(total=exps, msg="Generating Shuffled Bags")
+    bags, labels, data_set = parse_data(
+        dataset, "/Users/sherrychen/projects/smile/smile/classification/data"
+    )
+    cls, config = hypertuning.getBestSVM(
+        Classifier=misvm.miSVM,
+        classifier_args={
+            "kernel": "rbf",
+            "max_iters": 50,
+            "verbose": False,
+        },
+        bags=np.array(bags, dtype=object),
+        labels=np.array(labels),
+        bounds={"C": (1e-3, 1e5), "gamma": (1e-6, 1e1)},
+        num_samples=100,
+        num_splits=5,
+    )
 
     # Generate tasks from experiment list
     tasks = {}
@@ -483,7 +503,7 @@ def main(configfile, folddir, resultsdir):
                             s,
                         )
                         kwargs = {}
-                        kwargs["params"] = experiment["params"]
+                        kwargs["params"] = config
                         kwargs["shuffled_bags"] = setup_rep(
                             technique, dataset, f, r, n, s, folddir, resultsdir
                         )
@@ -512,6 +532,26 @@ def main(configfile, folddir, resultsdir):
         {"server.socket_port": PORT, "server.socket_host": "0.0.0.0"}
     )
     cherrypy.quickstart(server)
+
+
+def parse_data(data_name, data_path):
+    data_set = parse_c45(data_name, data_path)
+    raw_data = np.array(data_set.to_float())
+    features = np.delete(raw_data, [0, 1, -1], axis=1)
+
+    scaler = preprocessing.StandardScaler().fit(features)
+    data_std = scaler.scale_
+    data_mean = scaler.mean_
+
+    def normalizer(ex):
+        ex = np.array(ex[2:-1])
+        return (ex - data_mean) / data_std
+
+    bagset = bag_set(data_set)
+    bags = [np.array(b.to_float(normalizer)) for b in bagset]
+    labels = np.array([b.label for b in bagset], dtype=float)
+    labels[labels == 0] = -1
+    return bags, labels, data_set
 
 
 if __name__ == "__main__":

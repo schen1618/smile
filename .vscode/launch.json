@@ -5,12 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "/Users/sherrychen/projects/smile/smile/classification",
+            "justMyCode": true
+        },
+        {
             "name": "Client",
             "type": "python",
             "request": "launch",
             "program": "/Users/sherrychen/projects/smile/smile/classification/src/client.py",
             "console": "integratedTerminal",
-            "args": ["localhost"],
+            "args": [
+                "localhost"
+            ],
             "cwd": "/Users/sherrychen/projects/smile/smile/classification",
             "justMyCode": false
         },
@@ -20,7 +31,11 @@
             "request": "launch",
             "program": "/Users/sherrychen/projects/smile/smile/classification/src/server.py",
             "console": "integratedTerminal",
-            "args": ["config/small_config.yaml", "folds", "results"],
+            "args": [
+                "config/small_config.yaml",
+                "folds",
+                "results"
+            ],
             "cwd": "/Users/sherrychen/projects/smile/smile/classification",
             "justMyCode": false
         }
